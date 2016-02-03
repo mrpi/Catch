@@ -185,8 +185,43 @@ namespace Catch {
                 .writeAttribute( "expectedFailures", testRunStats.totals.assertions.failedButOk );
             m_xml.endElement();
         }
+        
+        virtual void listTests( std::vector<TestCase> const& matchedTestCases ) CATCH_OVERRIDE {
+            m_xml.setStream( stream );
+            m_xml.startElement( "CatchTestList" );
+            
+            for( std::vector<TestCase>::const_iterator it = matchedTestCases.begin(), itEnd = matchedTestCases.end();
+                     it != itEnd;
+                     ++it ) {
+                TestCaseInfo const& testCaseInfo = it->getTestCaseInfo();
+                XmlWriter::ScopedElement testCaseElem = m_xml.scopedElement( "TestCase" )
+                     .writeAttribute( "name", testCaseInfo.name )
+                     .writeAttribute( "classname", testCaseInfo.className );
+                     
+                {
+                    m_xml.scopedElement( "Source" )
+                        .writeAttribute( "filename", testCaseInfo.lineInfo.file )
+                        .writeAttribute( "line", testCaseInfo.lineInfo.line );
+                    writeTagsForTestList(testCaseInfo);
+                }
+            }
+            
+            m_xml.endElement();
+        }
 
     private:
+        void writeTagsForTestList(TestCaseInfo const& testCaseInfo)
+        {
+            XmlWriter::ScopedElement tagsElem = m_xml.scopedElement( "Tags" );
+            
+            for( std::set<std::string>::const_iterator tagIt = testCaseInfo.tags.begin(), tagItEnd = testCaseInfo.tags.end();
+                tagIt != tagItEnd;
+                ++tagIt ) {
+                m_xml.scopedElement( "Tag" )
+                    .writeAttribute( "name", *tagIt );
+            }            
+        }
+        
         Timer m_testCaseTimer;
         XmlWriter m_xml;
         int m_sectionDepth;

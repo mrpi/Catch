@@ -18,27 +18,20 @@
 #include <algorithm>
 
 namespace Catch {
-
-    inline std::size_t listTests( Config const& config ) {
-
-        TestSpec testSpec = config.testSpec();
+   
+    inline void listTestsConsole( std::vector<TestCase> const& matchedTestCases, Config const& config ) {
         if( config.testSpec().hasFilters() )
             Catch::cout() << "Matching test cases:\n";
-        else {
+        else
             Catch::cout() << "All available test cases:\n";
-            testSpec = TestSpecParser( ITagAliasRegistry::get() ).parse( "*" ).testSpec();
-        }
-
-        std::size_t matchedTests = 0;
+        
         TextAttributes nameAttr, tagsAttr;
         nameAttr.setInitialIndent( 2 ).setIndent( 4 );
         tagsAttr.setIndent( 6 );
 
-        std::vector<TestCase> matchedTestCases = filterTests( getAllTestCasesSorted( config ), testSpec, config );
         for( std::vector<TestCase>::const_iterator it = matchedTestCases.begin(), itEnd = matchedTestCases.end();
                 it != itEnd;
                 ++it ) {
-            matchedTests++;
             TestCaseInfo const& testCaseInfo = it->getTestCaseInfo();
             Colour::Code colour = testCaseInfo.isHidden()
                 ? Colour::SecondaryText
@@ -51,10 +44,33 @@ namespace Catch {
         }
 
         if( !config.testSpec().hasFilters() )
-            Catch::cout() << pluralise( matchedTests, "test case" ) << "\n" << std::endl;
+            Catch::cout() << pluralise( matchedTestCases.size(), "test case" ) << "\n" << std::endl;
         else
-            Catch::cout() << pluralise( matchedTests, "matching test case" ) << "\n" << std::endl;
-        return matchedTests;
+            Catch::cout() << pluralise( matchedTestCases.size(), "matching test case" ) << "\n" << std::endl;
+    }
+
+    inline std::size_t listTests( Config const& config ) {
+
+        TestSpec testSpec = config.testSpec();
+        if( !config.testSpec().hasFilters() ) {
+            testSpec = TestSpecParser( ITagAliasRegistry::get() ).parse( "*" ).testSpec();
+        }
+
+        std::vector<TestCase> matchedTestCases = filterTests( getAllTestCasesSorted( config ), testSpec, config );
+        if( config.getReporterNames().size() == 1 )
+        {
+            std::string reporterName = config.getReporterNames()[0];
+            IReporterRegistry::FactoryMap const& factories = getRegistryHub().getReporterRegistry().getFactories();
+            Ptr<IConfig const> ic( &config );
+            ReporterConfig rc( ic );
+            auto rep = factories.find(reporterName)->second->create( rc );
+
+            rep->listTests( matchedTestCases );
+            return matchedTestCases.size();
+        }
+        
+        listTestsConsole( matchedTestCases, config );
+        return matchedTestCases.size();
     }
 
     inline std::size_t listTestsNamesOnly( Config const& config ) {

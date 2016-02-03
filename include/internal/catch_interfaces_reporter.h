@@ -247,6 +247,8 @@ namespace Catch
         virtual void testRunEnded( TestRunStats const& testRunStats ) = 0;
 
         virtual void skipTest( TestCaseInfo const& testInfo ) = 0;
+        
+        virtual void listTests( std::vector<TestCase> const& matchedTestCases ) = 0;
     };
 
 

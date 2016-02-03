@@ -111,12 +111,18 @@ public: // IStreamingReporter
             (*it)->testRunEnded( testRunStats );
     }
 
-
     virtual void skipTest( TestCaseInfo const& testInfo ) CATCH_OVERRIDE {
         for( Reporters::const_iterator it = m_reporters.begin(), itEnd = m_reporters.end();
                 it != itEnd;
                 ++it )
             (*it)->skipTest( testInfo );
+    }
+        
+    virtual void listTests( std::vector<TestCase> const& matchedTestCases ) CATCH_OVERRIDE {
+        for( Reporters::const_iterator it = m_reporters.begin(), itEnd = m_reporters.end();
+                it != itEnd;
+                ++it )
+            (*it)->listTests( matchedTestCases );
     }
 };
 

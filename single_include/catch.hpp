@@ -1,6 +1,6 @@
 /*
  *  Catch v1.3.3
- *  Generated: 2016-01-22 07:51:36.661106
+ *  Generated: 2016-02-03 22:32:45.453499
  *  ----------------------------------------------------------
  *  This file has been merged from multiple headers. Please don't edit it directly
  *  Copyright (c) 2012 Two Blue Cubes Ltd. All rights reserved.
@@ -5044,6 +5044,8 @@ namespace Catch
         virtual void testRunEnded( TestRunStats const& testRunStats ) = 0;
 
         virtual void skipTest( TestCaseInfo const& testInfo ) = 0;
+
+        virtual void listTests( std::vector<TestCase> const& matchedTestCases ) = 0;
     };
 
     struct IReporterFactory : IShared {
@@ -5071,26 +5073,19 @@ namespace Catch
 
 namespace Catch {
 
-    inline std::size_t listTests( Config const& config ) {
-
-        TestSpec testSpec = config.testSpec();
+    inline void listTestsConsole( std::vector<TestCase> const& matchedTestCases, Config const& config ) {
         if( config.testSpec().hasFilters() )
             Catch::cout() << "Matching test cases:\n";
-        else {
+        else
             Catch::cout() << "All available test cases:\n";
-            testSpec = TestSpecParser( ITagAliasRegistry::get() ).parse( "*" ).testSpec();
-        }
 
-        std::size_t matchedTests = 0;
         TextAttributes nameAttr, tagsAttr;
         nameAttr.setInitialIndent( 2 ).setIndent( 4 );
         tagsAttr.setIndent( 6 );
 
-        std::vector<TestCase> matchedTestCases = filterTests( getAllTestCasesSorted( config ), testSpec, config );
         for( std::vector<TestCase>::const_iterator it = matchedTestCases.begin(), itEnd = matchedTestCases.end();
                 it != itEnd;
                 ++it ) {
-            matchedTests++;
             TestCaseInfo const& testCaseInfo = it->getTestCaseInfo();
             Colour::Code colour = testCaseInfo.isHidden()
                 ? Colour::SecondaryText
@@ -5103,10 +5098,33 @@ namespace Catch {
         }
 
         if( !config.testSpec().hasFilters() )
-            Catch::cout() << pluralise( matchedTests, "test case" ) << "\n" << std::endl;
+            Catch::cout() << pluralise( matchedTestCases.size(), "test case" ) << "\n" << std::endl;
         else
-            Catch::cout() << pluralise( matchedTests, "matching test case" ) << "\n" << std::endl;
-        return matchedTests;
+            Catch::cout() << pluralise( matchedTestCases.size(), "matching test case" ) << "\n" << std::endl;
+    }
+
+    inline std::size_t listTests( Config const& config ) {
+
+        TestSpec testSpec = config.testSpec();
+        if( !config.testSpec().hasFilters() ) {
+            testSpec = TestSpecParser( ITagAliasRegistry::get() ).parse( "*" ).testSpec();
+        }
+
+        std::vector<TestCase> matchedTestCases = filterTests( getAllTestCasesSorted( config ), testSpec, config );
+        if( config.getReporterNames().size() == 1 )
+        {
+            std::string reporterName = config.getReporterNames()[0];
+            IReporterRegistry::FactoryMap const& factories = getRegistryHub().getReporterRegistry().getFactories();
+            Ptr<IConfig const> ic( &config );
+            ReporterConfig rc( ic );
+            auto rep = factories.find(reporterName)->second->create( rc );
+
+            rep->listTests( matchedTestCases );
+            return matchedTestCases.size();
+        }
+
+        listTestsConsole( matchedTestCases, config );
+        return matchedTestCases.size();
     }
 
     inline std::size_t listTestsNamesOnly( Config const& config ) {
@@ -8249,6 +8267,13 @@ public: // IStreamingReporter
                 ++it )
             (*it)->skipTest( testInfo );
     }
+
+    virtual void listTests( std::vector<TestCase> const& matchedTestCases ) CATCH_OVERRIDE {
+        for( Reporters::const_iterator it = m_reporters.begin(), itEnd = m_reporters.end();
+                it != itEnd;
+                ++it )
+            (*it)->listTests( matchedTestCases );
+    }
 };
 
 Ptr<IStreamingReporter> addReporter( Ptr<IStreamingReporter> const& existingReporter, Ptr<IStreamingReporter> const& additionalReporter ) {
@@ -8333,6 +8358,10 @@ namespace Catch {
         virtual void skipTest( TestCaseInfo const& ) CATCH_OVERRIDE {
             // Don't do anything with this by default.
             // It can optionally be overridden in the derived class.
+        }
+
+        virtual void listTests( std::vector<TestCase> const& ) CATCH_OVERRIDE {
+            stream << "ERROR: This stream reporter does not support listing tests!" << std::endl;
         }
 
         Ptr<IConfig const> m_config;
@@ -8472,6 +8501,10 @@ namespace Catch {
         virtual void testRunEndedCumulative() = 0;
 
         virtual void skipTest( TestCaseInfo const& ) CATCH_OVERRIDE {}
+
+        virtual void listTests( std::vector<TestCase> const& ) CATCH_OVERRIDE {
+            stream << "ERROR: This stream reporter does not support listing tests!" << std::endl;
+        }
 
         Ptr<IConfig const> m_config;
         std::ostream& stream;
@@ -9008,7 +9041,42 @@ namespace Catch {
             m_xml.endElement();
         }
 
+        virtual void listTests( std::vector<TestCase> const& matchedTestCases ) CATCH_OVERRIDE {
+            m_xml.setStream( stream );
+            m_xml.startElement( "CatchTestList" );
+
+            for( std::vector<TestCase>::const_iterator it = matchedTestCases.begin(), itEnd = matchedTestCases.end();
+                     it != itEnd;
+                     ++it ) {
+                TestCaseInfo const& testCaseInfo = it->getTestCaseInfo();
+                XmlWriter::ScopedElement testCaseElem = m_xml.scopedElement( "TestCase" )
+                     .writeAttribute( "name", testCaseInfo.name )
+                     .writeAttribute( "classname", testCaseInfo.className );
+
+                {
+                    m_xml.scopedElement( "Source" )
+                        .writeAttribute( "filename", testCaseInfo.lineInfo.file )
+                        .writeAttribute( "line", testCaseInfo.lineInfo.line );
+                    writeTagsForTestList(testCaseInfo);
+                }
+            }
+
+            m_xml.endElement();
+        }
+
     private:
+        void writeTagsForTestList(TestCaseInfo const& testCaseInfo)
+        {
+            XmlWriter::ScopedElement tagsElem = m_xml.scopedElement( "Tags" );
+
+            for( std::set<std::string>::const_iterator tagIt = testCaseInfo.tags.begin(), tagItEnd = testCaseInfo.tags.end();
+                tagIt != tagItEnd;
+                ++tagIt ) {
+                m_xml.scopedElement( "Tag" )
+                    .writeAttribute( "name", *tagIt );
+            }
+        }
+
         Timer m_testCaseTimer;
         XmlWriter m_xml;
         int m_sectionDepth;

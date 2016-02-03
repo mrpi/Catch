@@ -64,6 +64,10 @@ namespace Catch {
             // Don't do anything with this by default.
             // It can optionally be overridden in the derived class.
         }
+        
+        virtual void listTests( std::vector<TestCase> const& ) CATCH_OVERRIDE {
+            stream << "ERROR: This stream reporter does not support listing tests!" << std::endl;
+        }
 
         Ptr<IConfig const> m_config;
         std::ostream& stream;
@@ -203,7 +207,11 @@ namespace Catch {
         virtual void testRunEndedCumulative() = 0;
 
         virtual void skipTest( TestCaseInfo const& ) CATCH_OVERRIDE {}
-
+        
+        virtual void listTests( std::vector<TestCase> const& ) CATCH_OVERRIDE {
+            stream << "ERROR: This stream reporter does not support listing tests!" << std::endl;
+        }
+        
         Ptr<IConfig const> m_config;
         std::ostream& stream;
         std::vector<AssertionStats> m_assertions;
