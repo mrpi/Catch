@@ -44,5 +44,8 @@ add_test(NAME RunTests COMMAND SelfTest)
 add_test(NAME ListTests COMMAND SelfTest --list-tests)
 set_tests_properties(ListTests PROPERTIES PASS_REGULAR_EXPRESSION "[0-9]+ test cases")
 
+add_test(NAME ListTestsXml COMMAND SelfTest -l -r xml)
+set_tests_properties(ListTestsXml PROPERTIES PASS_REGULAR_EXPRESSION "<TestCase name=\".+\">")
+
 add_test(NAME ListTags COMMAND SelfTest --list-tags)
 set_tests_properties(ListTags PROPERTIES PASS_REGULAR_EXPRESSION "[0-9]+ tags")
