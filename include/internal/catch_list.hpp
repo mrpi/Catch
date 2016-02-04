@@ -63,7 +63,7 @@ namespace Catch {
             IReporterRegistry::FactoryMap const& factories = getRegistryHub().getReporterRegistry().getFactories();
             Ptr<IConfig const> ic( &config );
             ReporterConfig rc( ic );
-            auto rep = factories.find(reporterName)->second->create( rc );
+            Ptr<IStreamingReporter> rep = factories.find(reporterName)->second->create( rc );
 
             rep->listTests( matchedTestCases );
             return matchedTestCases.size();
