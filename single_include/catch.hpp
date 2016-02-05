@@ -1,6 +1,6 @@
 /*
  *  Catch v1.3.3
- *  Generated: 2016-02-03 22:32:45.453499
+ *  Generated: 2016-02-05 18:44:21.468687
  *  ----------------------------------------------------------
  *  This file has been merged from multiple headers. Please don't edit it directly
  *  Copyright (c) 2012 Two Blue Cubes Ltd. All rights reserved.
@@ -5117,7 +5117,7 @@ namespace Catch {
             IReporterRegistry::FactoryMap const& factories = getRegistryHub().getReporterRegistry().getFactories();
             Ptr<IConfig const> ic( &config );
             ReporterConfig rc( ic );
-            auto rep = factories.find(reporterName)->second->create( rc );
+            Ptr<IStreamingReporter> rep = factories.find(reporterName)->second->create( rc );
 
             rep->listTests( matchedTestCases );
             return matchedTestCases.size();
@@ -8908,7 +8908,10 @@ namespace Catch {
 
         virtual void testCaseStarting( TestCaseInfo const& testInfo ) CATCH_OVERRIDE {
             StreamingReporterBase::testCaseStarting(testInfo);
-            m_xml.startElement( "TestCase" ).writeAttribute( "name", trim( testInfo.name ) );
+            m_xml.startElement( "TestCase" )
+                .writeAttribute( "name", trim( testInfo.name ) )
+                .writeAttribute( "filename", testInfo.lineInfo.file )
+                .writeAttribute( "line", testInfo.lineInfo.line );
 
             if ( m_config->showDurations() == ShowDurations::Always )
                 m_testCaseTimer.start();
@@ -8919,7 +8922,9 @@ namespace Catch {
             if( m_sectionDepth++ > 0 ) {
                 m_xml.startElement( "Section" )
                     .writeAttribute( "name", trim( sectionInfo.name ) )
-                    .writeAttribute( "description", sectionInfo.description );
+                    .writeAttribute( "description", sectionInfo.description )
+                    .writeAttribute( "filename", sectionInfo.lineInfo.file )
+                    .writeAttribute( "line", sectionInfo.lineInfo.line );
             }
         }
 
@@ -9044,6 +9049,7 @@ namespace Catch {
         virtual void listTests( std::vector<TestCase> const& matchedTestCases ) CATCH_OVERRIDE {
             m_xml.setStream( stream );
             m_xml.startElement( "CatchTestList" );
+            m_xml.writeAttribute( "name", m_config->name() );
 
             for( std::vector<TestCase>::const_iterator it = matchedTestCases.begin(), itEnd = matchedTestCases.end();
                      it != itEnd;
@@ -9051,7 +9057,12 @@ namespace Catch {
                 TestCaseInfo const& testCaseInfo = it->getTestCaseInfo();
                 XmlWriter::ScopedElement testCaseElem = m_xml.scopedElement( "TestCase" )
                      .writeAttribute( "name", testCaseInfo.name )
-                     .writeAttribute( "classname", testCaseInfo.className );
+                     .writeAttribute( "description", testCaseInfo.description )
+                     .writeAttribute( "classname", testCaseInfo.className )
+                     .writeAttribute( "expected_to_fail", testCaseInfo.expectedToFail() )
+                     .writeAttribute( "is_hidden", testCaseInfo.isHidden() )
+                     .writeAttribute( "throws", testCaseInfo.throws() )
+                     .writeAttribute( "ok_to_fail", testCaseInfo.okToFail() );
 
                 {
                     m_xml.scopedElement( "Source" )

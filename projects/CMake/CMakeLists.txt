@@ -47,14 +47,14 @@ set_tests_properties(ListTests PROPERTIES PASS_REGULAR_EXPRESSION "[0-9]+ test c
 add_test(NAME ListTags COMMAND SelfTest --list-tags)
 set_tests_properties(ListTags PROPERTIES PASS_REGULAR_EXPRESSION "[0-9]+ tags")
 
-add_test(NAME ListTestsXml_ContainsTestCase COMMAND SelfTest -l -r xml)
-set_tests_properties(ListTestsXml_ContainsTestCase PROPERTIES PASS_REGULAR_EXPRESSION "<TestCase name=\".+\">")
-
 add_test(NAME ListTestsXml_ContainsCatchTestList COMMAND SelfTest -l -r xml)
-set_tests_properties(ListTestsXml_ContainsCatchTestList PROPERTIES PASS_REGULAR_EXPRESSION "<CatchTestList>")
+set_tests_properties(ListTestsXml_ContainsCatchTestList PROPERTIES PASS_REGULAR_EXPRESSION "<CatchTestList name=\"[a-zA-Z0-9-_.\\:/ ]+\">.*</CatchTestList>")
+
+add_test(NAME ListTestsXml_ContainsTestCase COMMAND SelfTest -l -r xml)
+set_tests_properties(ListTestsXml_ContainsTestCase PROPERTIES PASS_REGULAR_EXPRESSION "<TestCase name=\".+\">.*<Source filename=\"[a-zA-Z0-9-_.\\:/ ]+\" line=\"[1-9][0-9]*\"/>.*</TestCase>")
 
 add_test(NAME ListTestsXml_ContainsSource COMMAND SelfTest -l -r xml)
-set_tests_properties(ListTestsXml_ContainsSource PROPERTIES PASS_REGULAR_EXPRESSION "<Source filename=\"[a-zA-Z.\\:/ ]+\" line=\"[1-9][0-9]*\"/>")
+set_tests_properties(ListTestsXml_ContainsSource PROPERTIES PASS_REGULAR_EXPRESSION "<Source filename=\"[a-zA-Z0-9-_.\\:/ ]+\" line=\"[1-9][0-9]*\"/>")
 
 add_test(NAME ListTestsXml_ContainsTags COMMAND SelfTest -l -r xml)
-set_tests_properties(ListTestsXml_ContainsTags PROPERTIES PASS_REGULAR_EXPRESSION "</Tags>")
+set_tests_properties(ListTestsXml_ContainsTags PROPERTIES PASS_REGULAR_EXPRESSION "<Tags>.*<Tag name=\"[a-zA-Z0-9-_.\\:/ ]+\"/>.*</Tags>")
